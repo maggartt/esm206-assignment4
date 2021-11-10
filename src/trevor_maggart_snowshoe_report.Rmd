@@ -5,7 +5,7 @@ date: "11/6/2021"
 output:
   html_document:
     toc: yes
-    toc_depth: 2
+    toc_depth: 3
     toc_float: yes
     collapsed: yes
     smooth_scroll: yes
@@ -23,13 +23,23 @@ library(janitor)
 library(lubridate)
 library(kableExtra)
 library(effsize)
-library(ggbeeswarm)
+library(ggbeeswarm) # Beeswarm plot
+library(broom)
 ```
 
-### Overview
+### 1. Overview
 
-This report provides exploratory insight into juvenile snowshoe hares in  
-### Data and methods
+This exploratory report provides insight into juvenile snowshoe hares (*Lepus americanus*) from the Bonanza Creek Long Term Ecological Research Site in the Tanana Valley of Alaska from 1999 to 2012 (Kielland et al. 2017). Snowshoe hares are 'keystone' prey species in northern boreal forests, and experience population fluctuations every 8-11 years.
+
+Population data for this report was collected at three sites: Bonanza Riparian (Bonrip), Bonanza Mature (Bonmat), and a lowland black spruce stand (Bonbs). Various aspects of the data are explored below, ranging from summary statistics on weight data (mean, median, etc.) to the relationship between juvenile hare hindfoot length and weight. These traits are analyzed across sex.
+
+### 2. Data and methods
+
+The data for this report was collected by Knut Kielland and colleagues and is available through the EDI data portal. The set includes 14 variables for 378 individual observations. Each observation represents a trapped snowshoe hare and contains data on the date, location, sex, age, weight, and hindfoot length. Within the analysis we include a visualization of annual hare trappings over time, as well as a visual comparison between male and female weights. Moreover, we analyze this comparison between males and females through two-sample t-tests using a significance level ($\alpha$) of 0.05 throughout. Differences between groups are described by Cohen’s *d* effect size. The relationship between weight and hind foot length is explored using simple linear regression and Pearson’s r correlation. All analyses are in R Studio version 1.4.1717 and R version 4.1.1.
+
+![](bonanza_forest.jpg){width=80%}
+
+**Figure 1.** Aerial image of the Bonanza Creek Experimental Forest, home to the keystone species snowshoe hares (*Lepus americanus*) (Credit: Roger Reuss)
 
 ```{r}
 # Read in the data
@@ -40,9 +50,13 @@ hares <- read_csv(here("data","bonanza_hares.csv")) %>%
 ```{r}
 juvenile_hares <- hares %>%
   filter(age=="j") %>%
-  mutate(date_new = mdy(date)) %>%
-  mutate(year = year(date_new)) %>%
-  group_by(year)
+  mutate(date_new = mdy(date)) %>% # Create new date
+  mutate(year = year(date_new)) %>% # Create year
+  group_by(year) %>%
+  mutate(site = case_when(      # Create a new site variable
+    grid == "bonrip" ~ "Bonrip",
+    grid == "bonmat" ~ "Bonmat",
+    grid == "bonbs" ~ "Bonbs")) 
 
 juvenile_hares_count <- juvenile_hares %>%
   summarize(hare_count =  n())
@@ -53,33 +67,31 @@ juvenile_hares_count_summary <- juvenile_hares_count %>%
             sd_count = sd(hare_count, na.rm = TRUE))
 ```
 
+### 3. Preliminary Results
+#### Annual Juvenile Hare Traps
 
 ```{r}
 ggplot(data = juvenile_hares_count, aes(x = year, y = hare_count)) +
-  geom_col(bins = 15, fill = "#6496FF", alpha = 0.9) +
+  geom_col(bins = 15, fill = "#6496FF", color = "darkblue", alpha = 0.9) +
   theme_light() +
   scale_x_continuous(breaks = 1999:2012, minor_breaks = NULL) +
   labs(x = "\nYear",
-       y = "Count\n",
-       caption = expression(paste(bold("Figure 1.")," Total number of annual juvenile hare trappings"))) +
+       y = "Count\n") +
   theme(axis.title.x = element_text(hjust = 0.5, vjust = 0.2),
         plot.caption = element_text(hjust = 0.5))
 ```
 
-```{r}
-ggplot(data = juvenile_hares, aes(x = weight)) +
-    geom_histogram(position = "identity", bins = 10, alpha = 0.6, aes(fill = sex, color = sex)) +
-    labs(x = '\nWeight (g)',
-         y = 'Count\n') +
-    scale_x_continuous(minor_breaks = NULL) +
-    scale_fill_manual(values = c("#FFC464","#60BDFF")) + 
-    scale_color_manual(values = c("white","white","white")) +
-    theme_light() +
-    facet_wrap(~grid)
-```
+**Figure 2.** Observed annual juvenile hare traps spanning the years 1999 - 2012. Columns represent the total count of observed juvenile hares across the timespan. 
+
+Juvenile hare populations peaked at the start of the study in 1999 with a total of 126 juvenile hare trappings. Since then, juvenile hare populations have fluctuated, but shown a general downward trend through time. 
 
 ```{r}
-ggplot(data = juvenile_hares, aes(x = sex, y =weight)) +
+juvenile_hares_sex <- juvenile_hares %>% 
+  mutate(sex = case_when(
+    sex == "m" ~ "Male", 
+    sex == "f" ~ "Female")) # Create more pleasing labels
+
+ggplot(data = juvenile_hares_sex, aes(x = sex, y =weight)) +
     geom_beeswarm(aes(color = sex), width = 0.15, size = 1.5, alpha = 0.8) +
     scale_color_manual(values = c("#FFC464", "#60BDFF")) +
     geom_boxplot(fill = NA, outlier.color = NA, width = 0.4) +
@@ -87,14 +99,14 @@ ggplot(data = juvenile_hares, aes(x = sex, y =weight)) +
                  geom = 'point',
                  size = 2,
                  shape = 20) +
-    facet_wrap(~grid) +
+    facet_wrap(~site) +
     labs(y = 'Weight (g)\n',
          x = '\nSex') +
     theme_light()
 ```
 
 ```{r}
-juvenile_hares_summary <- juvenile_hares %>%
+juvenile_hares_summary <- juvenile_hares_sex %>%
   group_by(sex) %>%
   summarize(mean = mean(weight, na.rm = TRUE),
             median = median(weight, na.rm = TRUE),
@@ -115,7 +127,18 @@ juvenile_hares_summary %>%
                      "Count"),
         caption = "<center>Table 1. Summary of Juvenile Hare Weights Across Sex<center>",
         digits = 2) %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "center")
+```
+
+```{r, include = FALSE}
+# Exploratory graphs analyzing distribution
+ggplot(data = juvenile_hares_sex, aes(sample = weight)) +
+  geom_qq() +
+  facet_wrap(~sex)
+
+ggplot(data = juvenile_hares_sex, aes(x = weight)) +
+  geom_histogram(bins = 15) +
+  facet_wrap(~sex)
 ```
 
 ```{r}
@@ -131,13 +154,10 @@ juvenile_female_sample <- juvenile_hares %>%
 juvenile_t <- t.test(juvenile_male_sample, juvenile_female_sample)
 
 juvenile_cohen <- cohen.d(juvenile_male_sample, juvenile_female_sample, na.rm = TRUE)
-
-juvenile_t
-juvenile_cohen
 ```
 
 ```{r}
-ggplot(data = juvenile_hares, aes(x = hindft, y = weight)) +
+ggplot(data = juvenile_hares_sex, aes(x = hindft, y = weight)) +
   geom_point(aes(color = sex), size = 1.5) +
   theme_minimal() +
   scale_color_manual(values = c("#FFC464", "#60BDFF", "gray")) +
