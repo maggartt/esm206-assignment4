@@ -1,0 +1,147 @@
+---
+title: "An Exploratory Report: Analyzing juvenile snowshoes hares in Bonanza Creek Experimental Forest"
+author: "Trevor Maggart"
+date: "11/6/2021"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+    collapsed: yes
+    smooth_scroll: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# Attach packages
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(effsize)
+library(ggbeeswarm)
+```
+
+### Overview
+
+This report provides exploratory insight into juvenile snowshoe hares in  
+### Data and methods
+
+```{r}
+# Read in the data
+hares <- read_csv(here("data","bonanza_hares.csv")) %>%
+  clean_names() # Clean the data to lower_case_snake
+```
+
+```{r}
+juvenile_hares <- hares %>%
+  filter(age=="j") %>%
+  mutate(date_new = mdy(date)) %>%
+  mutate(year = year(date_new)) %>%
+  group_by(year)
+
+juvenile_hares_count <- juvenile_hares %>%
+  summarize(hare_count =  n())
+
+juvenile_hares_count_summary <- juvenile_hares_count %>%
+  summarize(mean_count = mean(hare_count, na.rm = TRUE),
+            median_count = median(hare_count, na.rm = TRUE),
+            sd_count = sd(hare_count, na.rm = TRUE))
+```
+
+
+```{r}
+ggplot(data = juvenile_hares_count, aes(x = year, y = hare_count)) +
+  geom_col(bins = 15, fill = "#6496FF", alpha = 0.9) +
+  theme_light() +
+  scale_x_continuous(breaks = 1999:2012, minor_breaks = NULL) +
+  labs(x = "\nYear",
+       y = "Count\n",
+       caption = expression(paste(bold("Figure 1.")," Total number of annual juvenile hare trappings"))) +
+  theme(axis.title.x = element_text(hjust = 0.5, vjust = 0.2),
+        plot.caption = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(data = juvenile_hares, aes(x = weight)) +
+    geom_histogram(position = "identity", bins = 10, alpha = 0.6, aes(fill = sex, color = sex)) +
+    labs(x = '\nWeight (g)',
+         y = 'Count\n') +
+    scale_x_continuous(minor_breaks = NULL) +
+    scale_fill_manual(values = c("#FFC464","#60BDFF")) + 
+    scale_color_manual(values = c("white","white","white")) +
+    theme_light() +
+    facet_wrap(~grid)
+```
+
+```{r}
+ggplot(data = juvenile_hares, aes(x = sex, y =weight)) +
+    geom_beeswarm(aes(color = sex), width = 0.15, size = 1.5, alpha = 0.8) +
+    scale_color_manual(values = c("#FFC464", "#60BDFF")) +
+    geom_boxplot(fill = NA, outlier.color = NA, width = 0.4) +
+    stat_summary(fun = mean,
+                 geom = 'point',
+                 size = 2,
+                 shape = 20) +
+    facet_wrap(~grid) +
+    labs(y = 'Weight (g)\n',
+         x = '\nSex') +
+    theme_light()
+```
+
+```{r}
+juvenile_hares_summary <- juvenile_hares %>%
+  group_by(sex) %>%
+  summarize(mean = mean(weight, na.rm = TRUE),
+            median = median(weight, na.rm = TRUE),
+            sd = sd(weight, na.rm = TRUE),
+            max = max(weight, na.rm = TRUE),
+            min = min(weight, na.rm = TRUE),
+            count = n()) 
+```
+
+```{r}
+juvenile_hares_summary %>%
+ kable(col.names = c("Sex", 
+                     "Mean (g)", 
+                     "Median (g)", 
+                     "Standard Deviation (g)",
+                     "Max (g)", 
+                     "Min (g)", 
+                     "Count"),
+        caption = "<center>Table 1. Summary of Juvenile Hare Weights Across Sex<center>",
+        digits = 2) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+```{r}
+# Creating the Samples
+juvenile_male_sample <- juvenile_hares %>% 
+  filter(sex == "m") %>% 
+  pull(weight)
+
+juvenile_female_sample <- juvenile_hares %>% 
+  filter(sex == "f") %>% 
+  pull(weight)
+
+juvenile_t <- t.test(juvenile_male_sample, juvenile_female_sample)
+
+juvenile_cohen <- cohen.d(juvenile_male_sample, juvenile_female_sample, na.rm = TRUE)
+
+juvenile_t
+juvenile_cohen
+```
+
+```{r}
+ggplot(data = juvenile_hares, aes(x = hindft, y = weight)) +
+  geom_point(aes(color = sex), size = 1.5) +
+  theme_minimal() +
+  scale_color_manual(values = c("#FFC464", "#60BDFF", "gray")) +
+  geom_smooth(method = "lm", se = FALSE, color = "gray30") +
+  labs(x = "\nHindfoot Length (mm)",
+       y = "Weight (g)\n")
+```
