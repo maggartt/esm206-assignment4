@@ -1,5 +1,5 @@
 ---
-title: "An Exploratory Report: Analyzing juvenile snowshoes hares in Bonanza Creek Experimental Forest"
+title: "An exploratory report: analyzing juvenile snowshoes hares in Bonanza Creek Experimental Forest"
 author: "Trevor Maggart"
 date: "November 10, 2021"
 output: html_document
@@ -124,7 +124,6 @@ ggplot(data = juvenile_hares_sex, aes(x = sex, y =weight)) +
 
 **Figure 3.** Visualization of weight (g) distribution across different sexes of juvenile hares. The data is shown across three different sites: Bonanza Riparian (Bonrip), lowland black spruce stand (Bonbs), and Bonanza Mature (Bonmat). Observations with no associated sex data are represented as NA. Data: (Kielland et al. 2017).
 
-<br>
 The graph shows that male and female hare weights differ. Male weights trend, on average, greater than female weights across all three sites. Bonrip displays the most data and is where we find the maximum weight of both male and female hares. Observations with no associated sex data are represented as NA, and are scarce across the three sites. 
 
 ##### Descriptive Statistics
@@ -153,6 +152,7 @@ juvenile_hares_summary %>%
         digits = 2) %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "center")
 ```
+
 ```{r, include = FALSE}
 # Exploratory graphs analyzing distribution
 ggplot(data = juvenile_hares_sex, aes(sample = weight)) +
@@ -184,7 +184,7 @@ juvenile_t <- t.test(juvenile_male_sample, juvenile_female_sample)
 juvenile_cohen <- cohen.d(juvenile_male_sample, juvenile_female_sample, na.rm = TRUE)
 ```
 
-Assumptions of normalcy and homoscedasticity were tested using qqplot graphs and exploratory histograms. which appeared to be fully normal for further statistical analysis to be valuable. The mean weight of male juvenile hares is `r round(juvenile_hares_summary$mean[2], 1)` grams and that of female juvenile hares is `r round(juvenile_hares_summary$mean[1], 1)` grams, which results in a difference of `r round(means_difference, 1)` grams. Considering the standard deviation in male hares weight is `r round(juvenile_hares_summary$sd[2], 1)` grams and `r round(juvenile_hares_summary$sd[1], 1)` grams for females, this difference appears negligible. This is corroborated by the small effect size (Cohen's *d* = `r round(juvenile_cohen$estimate, 2)`), but the two-sample t-test suggests there is a significant difference in the sample means (two-sample t-test, t = `r round(juvenile_t$statistic, 2)`, p = `r round(juvenile_t$p.value, 3)`).
+Assumptions of normalcy and homoscedasticity were tested using qqplot graphs and exploratory histograms. Female hare weights displayed a relatively normal distribution, but male hare weights displayed a more bimodal distribution. The mean value of male juvenile hare weights is `r round(juvenile_hares_summary$mean[2], 1)` grams and that of female juvenile hares is `r round(juvenile_hares_summary$mean[1], 1)` grams, which results in a difference of `r round(means_difference, 1)` grams. Considering the standard deviation in male hares weight is `r round(juvenile_hares_summary$sd[2], 1)` grams and `r round(juvenile_hares_summary$sd[1], 1)` grams for females, this difference appears negligible. This is corroborated by the small effect size (Cohen's *d* = `r round(juvenile_cohen$estimate, 2)`), but the two-sample t-test suggests there is a significant difference in the sample means (two-sample t-test, t = `r round(juvenile_t$statistic, 2)`, p = `r round(juvenile_t$p.value, 3)`).
 
 ```{r, fig.align='center'}
 ggplot(data = juvenile_hares_sex, aes(x = hindft, y = weight)) +
@@ -195,7 +195,8 @@ ggplot(data = juvenile_hares_sex, aes(x = hindft, y = weight)) +
   labs(x = "\nHindfoot Length (mm)",
        y = "Weight (g)\n",
        color = "Sex") +
-  theme(legend.position = c(0.2, 0.7))
+  theme(legend.position = c(0.2, 0.7),
+        legend.box.background = element_rect(fill = "white", color = "black"))
 ```
 
 **Figure 4.** Visualization of weight (g) distribution compared to hindfoot length (mm). Female hares are represented as orange points, while male are represented as blue. Observations with no associated sex data are grey and labeled NA.  
